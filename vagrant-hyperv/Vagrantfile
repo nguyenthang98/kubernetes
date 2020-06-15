@@ -1,0 +1,66 @@
+ENV['VAGRANT_NO_PARALLEL'] = 'yes'
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu1804"
+
+  config.trigger.before :up do |trigger|
+    trigger.info = "Creating 'NATSwitch' Hyper-V switch if it does not exist..."
+    trigger.run = {privileged: "true", powershell_elevated_interactive: "true", path: "./scripts/nat-hyperv-switch.ps1"}
+  end
+
+  config.vm.define "master" do |master|
+	master.vm.hostname = "hyperv-master"
+	master.vm.provider :hyperv do |hv|
+		hv.memory = "2048"
+		hv.cpus = "2"
+		hv.mac = "00155D112105"
+		hv.vmname = "hyperv-master"
+	end
+	master.vm.provision "shell", path: "./scripts/configure-static-ip-master.sh"
+	master.vm.provision :reload
+	master.trigger.before :reload do |trigger|
+		trigger.info = "Setting Hyper-V switch to 'NATSwitch' to allow for static IP..."
+
+	  	trigger.run = {
+			privileged: "true",
+			powershell_elevated_interactive: "true", 
+			path: "./scripts/set-hyperv-switch-master.ps1"
+		}
+	end
+
+	master.vm.provision "shell", path: "./scripts/bootstrap-tools.sh"
+  	master.vm.provision "shell", path: "./scripts/bootstrap-master.sh"
+  end
+
+  NODE_COUNT = 1
+  (1..NODE_COUNT).each do |i|
+	config.vm.define "worker-#{i}" do |worker|
+		worker.vm.hostname = "hyperv-worker-#{i}"
+		worker.vm.provider :hyperv do |hv|
+			hv.memory = "2048"
+			hv.cpus = "2"
+			hv.mac = "00155D11211#{i}"
+			hv.vmname = "hyperv-worker-#{i}"
+		end
+		# worker.vm.provision "shell", path: "./scripts/configure-static-ip-worker.sh"
+		worker.vm.provision "shell" do |s|
+			s.path = "./scripts/configure-static-ip-worker.sh"
+			s.args = ["#{i}"]
+		end
+		worker.vm.provision :reload
+		worker.trigger.before :reload do |trigger|
+		  	trigger.info = "Setting Hyper-V switch to 'NATSwitch' to allow for static IP..."
+
+		  	trigger.run = {
+				privileged: "true",
+				powershell_elevated_interactive: "true", 
+				path: "./scripts/set-hyperv-switch-worker.ps1",
+				args: ["#{i}"]
+			}
+		end
+
+		worker.vm.provision "shell", path: "./scripts/bootstrap-tools.sh"
+  		worker.vm.provision "shell", path: "./scripts/bootstrap-worker.sh"
+	end
+  end
+end
