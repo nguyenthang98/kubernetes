@@ -10,7 +10,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "master" do |master|
 	master.vm.hostname = "hyperv-master"
-	master.vm.provider :hyperv do |hv|
+	master.vm.provider :hyperv do |hv, override|
 		hv.memory = "2048"
 		hv.cpus = "2"
 		hv.mac = "00155D112105"
@@ -32,11 +32,11 @@ Vagrant.configure("2") do |config|
   	master.vm.provision "shell", path: "./scripts/bootstrap-master.sh"
   end
 
-  NODE_COUNT = 1
+  NODE_COUNT = 2
   (1..NODE_COUNT).each do |i|
 	config.vm.define "worker-#{i}" do |worker|
 		worker.vm.hostname = "hyperv-worker-#{i}"
-		worker.vm.provider :hyperv do |hv|
+		worker.vm.provider :hyperv do |hv, override|
 			hv.memory = "2048"
 			hv.cpus = "2"
 			hv.mac = "00155D11211#{i}"

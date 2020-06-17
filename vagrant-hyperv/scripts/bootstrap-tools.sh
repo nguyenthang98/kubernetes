@@ -8,6 +8,7 @@ log '[TASK 1] update host file'
 cat >>/etc/hosts<<EOF
 192.168.100.10 hyperv-master
 192.168.100.21 hyperv-worker-1
+192.168.100.22 hyperv-worker-2
 EOF
 
 log '[TASK 2] install docker engine'
