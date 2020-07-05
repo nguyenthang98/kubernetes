@@ -1,0 +1,28 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu1804"
+
+  config.vm.define "nfs-server" do |master|
+	master.vm.hostname = "hyperv-nfs-server"
+	master.vm.provider :hyperv do |hv, override|
+		hv.memory = "1024"
+		hv.cpus = "1"
+		hv.mac = "00155D112205"
+		hv.vmname = "hyperv-nfs-server"
+	end
+	master.vm.provision "shell", path: "./scripts/configure-static-ip-nfs-server.sh"
+	master.vm.provision :reload
+	master.trigger.before :reload do |trigger|
+		trigger.info = "Setting Hyper-V switch to 'NATSwitch' to allow for static IP..."
+
+	  	trigger.run = {
+			privileged: "true",
+			powershell_elevated_interactive: "true", 
+			path: "./scripts/set-hyperv-switch-nfs-server.ps1"
+		}
+	end
+
+	master.vm.provision "shell", {
+		path: "./scripts/bootstrap-tools.sh"
+	}
+  end
+end
